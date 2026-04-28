@@ -25,7 +25,8 @@ y = df['satisfaction'].map({
     'satisfied': 1
 })
 
-X = df.drop(columns=['satisfaction'])
+# ✅ УБРАЛИ ID
+X = df.drop(columns=['satisfaction', 'id'], errors='ignore')
 
 cat_cols = X.select_dtypes(include='object').columns
 num_cols = X.select_dtypes(include=['int64', 'float64']).columns
@@ -86,7 +87,6 @@ with col3:
     travel_class = st.selectbox("Class", ["Eco", "Eco Plus", "Business"])
     flight_distance = st.number_input("Flight Distance", 0, 5000, 500)
 
-
 # ----------- SERVICE RATINGS -----------
 st.markdown("### ⭐ Service Ratings")
 
@@ -110,7 +110,6 @@ with col3:
     inflight = st.slider("Inflight", 0, 5, 3)
     cleanliness = st.slider("Cleanliness", 0, 5, 3)
 
-
 # ----------- EXTRA -----------
 st.markdown("### ⏱ Travel Conditions")
 
@@ -125,7 +124,6 @@ with col2:
 with col3:
     dep_delay = st.number_input("Departure Delay", 0, 1000, 0)
     arr_delay = st.number_input("Arrival Delay", 0, 1000, 0)
-
 
 # ---------- INPUT ----------
 input_data = pd.DataFrame(columns=X.columns)
@@ -156,7 +154,6 @@ input_data["Cleanliness"] = cleanliness
 input_data["Departure Delay in Minutes"] = dep_delay
 input_data["Arrival Delay in Minutes"] = arr_delay
 
-
 # ---------- PREDICT ----------
 if st.button("Predict"):
 
@@ -167,10 +164,10 @@ if st.button("Predict"):
 
     if pred == 1:
         st.success(f"✅ Satisfied (Probability: {proba:.2f})")
+        st.progress(float(proba))
     else:
-        st.error(f"❌ Not satisfied (Probability: {proba:.2f})")
-
-    st.progress(float(proba))
+        st.error(f"❌ Not satisfied (Probability: {1 - proba:.2f})")
+        st.progress(float(1 - proba))
 
     # ---------- SHAP ----------
     st.subheader("SHAP Explanation")
@@ -183,14 +180,19 @@ if st.button("Predict"):
     explainer = shap.TreeExplainer(model_inner)
     shap_values = explainer.shap_values(X_transformed)
 
+    # ✅ Чистим имена признаков
     feature_names = preprocessor.get_feature_names_out()
+    clean_feature_names = [
+        name.replace("num__", "").replace("cat__", "")
+        for name in feature_names
+    ]
 
     shap.plots.waterfall(
         shap.Explanation(
             values=shap_values[0],
             base_values=explainer.expected_value,
             data=X_transformed[0],
-            feature_names=feature_names
+            feature_names=clean_feature_names
         )
     )
 
